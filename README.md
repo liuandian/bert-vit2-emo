@@ -66,7 +66,7 @@ python emo_gen_bert.py
 
 ### 数据以及训练好的模型准备
 
-将casia文件夹复制到根目录的data文件夹中
+将data文件夹复制到根目录中
 ```
 data/
 └── casia/
