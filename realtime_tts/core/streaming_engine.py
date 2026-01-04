@@ -284,7 +284,7 @@ class StreamingInferenceEngine:
                 language=language,
                 **kwargs
             )
-            print("生成chunk成功")
+            print("[StreamEngine] 生成chunk成功")
             # 如果不是第一个chunk，进行overlap-add拼接
             if self.previous_audio_tail is not None:
                 chunk_audio = self.audio_processor.overlap_add(

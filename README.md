@@ -88,7 +88,7 @@ data/
 
 ```bash
 python -m realtime_tts.webui.gradio_app \
-    --model data/casia/models/G_0.pth \ 模型路径#
+    --model data/casia/models/G_53000.pth \
     --config data/casia/configs/config.json \
     --device cuda \
     --port 7864
