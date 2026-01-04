@@ -171,24 +171,33 @@ def plot_spectrogram_to_numpy(spectrogram):
     global MATPLOTLIB_FLAG
     if not MATPLOTLIB_FLAG:
         import matplotlib
-
         matplotlib.use("Agg")
         MATPLOTLIB_FLAG = True
-        mpl_logger = logging.getLogger("matplotlib")
-        mpl_logger.setLevel(logging.WARNING)
     import matplotlib.pylab as plt
     import numpy as np
-
     fig, ax = plt.subplots(figsize=(10, 2))
-    im = ax.imshow(spectrogram, aspect="auto", origin="lower", interpolation="none")
+    im = ax.imshow(spectrogram, aspect="auto", origin="lower",
+                   interpolation='none')
     plt.colorbar(im, ax=ax)
     plt.xlabel("Frames")
     plt.ylabel("Channels")
     plt.tight_layout()
 
     fig.canvas.draw()
-    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep="")
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    
+    # === 核心修改部分 Start ===
+    # 1. 使用 buffer_rgba() 获取数据 (新版 Matplotlib 标准写法)
+    data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
+    
+    # 2. 获取宽高并重塑形状 (RGBA 是 4 通道)
+    w, h = fig.canvas.get_width_height()
+    data = data.reshape((h, w, 4))
+    
+    # 3. 这里的切片 [:, :, :3] 意思是：只取前 3 个通道(RGB)，扔掉第 4 个(Alpha/透明度)
+    # 这样既解决了报错，又解决了 "size 800000 into shape (..., 3)" 的维度错误
+    data = data[:, :, :3] 
+    # === 核心修改部分 End ===
+
     plt.close()
     return data
 
@@ -218,10 +227,13 @@ def plot_alignment_to_numpy(alignment, info=None):
     plt.tight_layout()
 
     fig.canvas.draw()
-    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep="")
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    data = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
+    w, h = fig.canvas.get_width_height()
+    data = data.reshape((h, w, 4))
+    data = data[:, :, :3] # 只取 RGB
     plt.close()
     return data
+
 
 
 def load_wav_to_torch(full_path):

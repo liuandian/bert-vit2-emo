@@ -15,8 +15,20 @@ pipeline_tag: audio-classification
 
 # Model for Dimensional Speech Emotion Recognition based on Wav2vec 2.0
 
-The model expects a raw audio signal as input and outputs predictions for arousal, dominance and valence in a range of approximately 0...1. In addition, it also provides the pooled states of the last transformer layer. The model was created by fine-tuning [
-Wav2Vec2-Large-Robust](https://huggingface.co/facebook/wav2vec2-large-robust) on [MSP-Podcast](https://ecs.utdallas.edu/research/researchlabs/msp-lab/MSP-Podcast.html) (v1.7). The model was pruned from 24 to 12 transformer layers before fine-tuning. An [ONNX](https://onnx.ai/") export of the model is available from [doi:10.5281/zenodo.6221127](https://zenodo.org/record/6221127). Further details are given in the associated [paper](https://arxiv.org/abs/2203.07378) and [tutorial](https://github.com/audeering/w2v2-how-to).
+Please note that this model is for research purpose only.
+A commercial license for a model
+that has been trained on much more data
+can be acquired with [audEERING](https://www.audeering.com/products/devaice/).
+The model expects a raw audio signal as input,
+and outputs predictions for arousal, dominance and valence in a range of approximately 0...1.
+In addition,
+it provides the pooled states of the last transformer layer.
+The model was created by fine-tuning
+[Wav2Vec2-Large-Robust](https://huggingface.co/facebook/wav2vec2-large-robust)
+on [MSP-Podcast](https://ecs.utdallas.edu/research/researchlabs/msp-lab/MSP-Podcast.html) (v1.7).
+The model was pruned from 24 to 12 transformer layers before fine-tuning.
+An [ONNX](https://onnx.ai/) export of the model is available from [doi:10.5281/zenodo.6221127](https://zenodo.org/record/6221127).
+Further details are given in the associated [paper](https://arxiv.org/abs/2203.07378) and [tutorial](https://github.com/audeering/w2v2-how-to).
 
 # Usage
 
@@ -84,7 +96,7 @@ class EmotionModel(Wav2Vec2PreTrainedModel):
 device = 'cpu'
 model_name = 'audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim'
 processor = Wav2Vec2Processor.from_pretrained(model_name)
-model = EmotionModel.from_pretrained(model_name)
+model = EmotionModel.from_pretrained(model_name).to(device)
 
 # dummy signal
 sampling_rate = 16000

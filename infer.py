@@ -11,12 +11,12 @@
 import torch
 import commons
 from text import cleaned_text_to_sequence, get_bert
-
+from emotion_utils import prepare_emotion_for_model
 # from clap_wrapper import get_clap_audio_feature, get_clap_text_feature
 from typing import Union
 from text.cleaner import clean_text
 import utils
-
+from emotion_utils import get_emotion_embedding
 from models import SynthesizerTrn
 from text.symbols import symbols
 
@@ -104,7 +104,7 @@ def get_net_g(model_path: str, version: str, device: str, hps):
     return net_g
 
 
-def get_text(text, language_str, hps, device, style_text=None, style_weight=0.7):
+def get_text(text, language_str, emo, hps, device, style_text=None, style_weight=0.7):
     style_text = None if style_text == "" else style_text
     # 在此处实现当前版本的get_text
     norm_text, phone, tone, word2ph = clean_text(text, language_str)
@@ -145,7 +145,10 @@ def get_text(text, language_str, hps, device, style_text=None, style_weight=0.7)
     phone = torch.LongTensor(phone)
     tone = torch.LongTensor(tone)
     language = torch.LongTensor(language)
-    return bert, ja_bert, en_bert, phone, tone, language
+    
+    emo_bert=get_emotion_embedding(emo)
+    
+    return bert, ja_bert, en_bert,emo_bert, phone, tone, language
 
 
 def infer(
@@ -160,7 +163,7 @@ def infer(
     hps,
     net_g,
     device,
-    reference_audio=None,
+    emotion_intensity,
     skip_start=False,
     skip_end=False,
     style_text=None,
@@ -207,7 +210,7 @@ def infer(
                 hps,
                 net_g,
                 device,
-                reference_audio,
+                emotion_intensity,
                 skip_start,
                 skip_end,
                 style_text,
@@ -225,7 +228,7 @@ def infer(
                 hps,
                 net_g,
                 device,
-                reference_audio,
+                emotion_intensity,
                 emotion,
                 skip_start,
                 skip_end,
@@ -257,17 +260,29 @@ def infer(
                 net_g,
                 device,
             )
-    # 在此处实现当前版本的推理
-    # emo = get_emo_(reference_audio, emotion, sid)
-    # if isinstance(reference_audio, np.ndarray):
-    #     emo = get_clap_audio_feature(reference_audio, device)
-    # else:
-    #     emo = get_clap_text_feature(emotion, device)
-    # emo = torch.squeeze(emo, dim=1)
+    # Process emotion - 从预设embedding库加载
+    if emotion is not None:
+        try:
+            emo = prepare_emotion_for_model(
+                emotion=emotion,
+                intensity=emotion_intensity,
+                device=device,
+            )
+        except FileNotFoundError as e:
+            print(f"[Warning] {e}")
+            print("[Warning] 使用neutral情感")
+            emo = prepare_emotion_for_model(
+                emotion="neutral",
+                intensity=1.0,
+                device=device,
+            )
+    else:
+        emo = None
 
-    bert, ja_bert, en_bert, phones, tones, lang_ids = get_text(
+    bert, ja_bert, en_bert, emo_bert, phones, tones, lang_ids = get_text(
         text,
         language,
+        emotion,
         hps,
         device,
         style_text=style_text,
@@ -294,6 +309,7 @@ def infer(
         bert = bert.to(device).unsqueeze(0)
         ja_bert = ja_bert.to(device).unsqueeze(0)
         en_bert = en_bert.to(device).unsqueeze(0)
+        emo_bert = emo.to(device).unsqueeze(0)
         x_tst_lengths = torch.LongTensor([phones.size(0)]).to(device)
         # emo = emo.to(device).unsqueeze(0)
         del phones
@@ -308,6 +324,7 @@ def infer(
                 bert,
                 ja_bert,
                 en_bert,
+                emo_bert=emo_bert,
                 sdp_ratio=sdp_ratio,
                 noise_scale=noise_scale,
                 noise_scale_w=noise_scale_w,
@@ -326,6 +343,7 @@ def infer(
             speakers,
             ja_bert,
             en_bert,
+            emo,
         )  # , emo
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -343,12 +361,12 @@ def infer_multilang(
     hps,
     net_g,
     device,
-    reference_audio=None,
+    emotion_intensity=1.0,
     emotion=None,
     skip_start=False,
     skip_end=False,
 ):
-    bert, ja_bert, en_bert, phones, tones, lang_ids = [], [], [], [], [], []
+    bert, ja_bert, en_bert, emo_bert,phones, tones, lang_ids = [], [], [], [], [], [], []
     # emo = get_emo_(reference_audio, emotion, sid)
     # if isinstance(reference_audio, np.ndarray):
     #     emo = get_clap_audio_feature(reference_audio, device)

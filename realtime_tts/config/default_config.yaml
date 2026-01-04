@@ -1,0 +1,38 @@
+# 实时TTS系统配置文件
+
+# 模型配置
+model:
+  model_path: "models/G_8000.pth"  # 模型路径
+  config_path: "configs/config.json"  # 配置文件路径
+  device: "cuda"  # 运行设备：cuda 或 cpu
+
+# 流式引擎配置
+streaming:
+  context_window_size: 5  # 上下文窗口大小（字符数）
+  overlap_duration: 0.05  # 音频重叠时长（秒）
+  max_chunk_len: 40  # 最大chunk长度（字符数）
+  enable_prosody_planning: true  # 是否启用韵律规划
+
+# BERT优化配置
+bert_optimizer:
+  enable_cache: true  # 是否启用缓存
+  cache_dir: "realtime_tts/cache/bert"  # 缓存目录
+  cache_size: 1000  # 内存缓存大小（LRU）
+
+# API服务配置
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins:
+    - "*"
+
+# WebUI配置
+webui:
+  server_name: "0.0.0.0"
+  server_port: 7860
+  share: false  # 是否创建公共链接
+
+# 输出配置
+output:
+  audio_dir: "realtime_tts/outputs/audio"
+  log_dir: "realtime_tts/outputs/logs"

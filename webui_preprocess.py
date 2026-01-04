@@ -64,11 +64,11 @@ def preprocess_text(data_dir):
     lines = open(lbl_path, "r", encoding="utf-8").readlines()
     with open(lbl_path, "w", encoding="utf-8") as f:
         for line in lines:
-            path, spk, language, text = line.strip().split("|")
+            path, spk, language, text, emo = line.strip().split("|")
             path = os.path.join(start_path, "wavs", os.path.basename(path)).replace(
                 "\\", "/"
             )
-            f.writelines(f"{path}|{spk}|{language}|{text}\n")
+            f.writelines(f"{path}|{spk}|{language}|{text}|{emo}\n")
     subprocess.run(
         [
             "python",
@@ -124,14 +124,14 @@ if __name__ == "__main__":
                     "其中，`raw` 文件夹下保存所有的音频文件，`esd.list` 文件为标签文本，格式为\n"
                     "\n"
                     "```\n"
-                    "****.wav|{说话人名}|{语言 ID}|{标签文本}\n"
+                    "****.wav|{说话人名}|{语言 ID}|{标签文本}|{情绪}\n"
                     "```\n"
                     "\n"
                     "例如：\n"
                     "```\n"
-                    "vo_ABDLQ001_1_paimon_02.wav|派蒙|ZH|没什么没什么，只是平时他总是站在这里，有点奇怪而已。\n"
-                    "noa_501_0001.wav|NOA|JP|そうだね、油断しないのはとても大事なことだと思う\n"
-                    "Albedo_vo_ABDLQ002_4_albedo_01.wav|Albedo|EN|Who are you? Why did you alarm them?\n"
+                    "vo_ABDLQ001_1_paimon_02.wav|派蒙|ZH|没什么没什么，只是平时他总是站在这里，有点奇怪而已。|happy\n"
+                    "noa_501_0001.wav|NOA|JP|そうだね、油断しないのはとても大事なことだと思う|fear\n"
+                    "Albedo_vo_ABDLQ002_4_albedo_01.wav|Albedo|EN|Who are you? Why did you alarm them?|neutral\n"
                     "...\n"
                     "```\n"
                 )
@@ -159,7 +159,7 @@ if __name__ == "__main__":
                 _ = gr.Markdown(
                     value="## 训练模型及部署：\n"
                     "修改根目录下的 `config.yml` 中 `dataset_path` 一项为 `data/{你的数据集名称}`\n"
-                    "- 训练：将[预训练模型文件](https://openi.pcl.ac.cn/Stardust_minus/Bert-VITS2/modelmanage/show_model)（`D_0.pth`、`DUR_0.pth`、`WD_0.pth` 和 `G_0.pth`）放到 `data/{你的数据集名称}/models` 文件夹下，执行 `torchrun --nproc_per_node=1 train_ms.py` 命令（多卡运行可参考 `run_MnodesAndMgpus.sh` 中的命令。\n"
+                    "- 训练：将[预训练模型文件](https://www.modelscope.cn/models/Showmelater/bert-Vits2.3/tree/master/Bert-VITS2_2.3%E5%BA%95%E6%A8%A1)（`D_0.pth`、`DUR_0.pth`、`WD_0.pth` 和 `G_0.pth`）放到 `data/{你的数据集名称}/models` 文件夹下，执行 `torchrun --nproc_per_node=1 train_ms.py` 命令（多卡运行可参考 `run_MnodesAndMgpus.sh` 中的命令。\n"
                     "- 部署：修改根目录下的 `config.yml` 中 `webui` 下 `model` 一项为 `models/{权重文件名}.pth` （如 G_10000.pth），然后执行 `python webui.py`"
                 )
 

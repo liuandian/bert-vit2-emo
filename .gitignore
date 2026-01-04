@@ -166,10 +166,12 @@ cython_debug/
 filelists/*
 !/filelists/esd.list
 data/*
-/*.yml
+# /*.yml
+/emotional/presets/*
 !/default_config.yml
 /Web/
 /emotional/*/*.bin
+/emotional/*/*.safetensors
 /slm/*/*.bin
 /bert/*/*.bin
 /bert/*/*.h5

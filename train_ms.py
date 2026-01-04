@@ -432,6 +432,7 @@ def train_and_evaluate(
         bert,
         ja_bert,
         en_bert,
+        emo_bert,
     ) in enumerate(tqdm(train_loader)):
         if net_g.module.use_noise_scaled_mas:
             current_mas_noise_scale = (
@@ -454,7 +455,7 @@ def train_and_evaluate(
         bert = bert.cuda(local_rank, non_blocking=True)
         ja_bert = ja_bert.cuda(local_rank, non_blocking=True)
         en_bert = en_bert.cuda(local_rank, non_blocking=True)
-
+        emo_bert = emo_bert.cuda(local_rank, non_blocking=True)
         with autocast(enabled=hps.train.bf16_run, dtype=torch.bfloat16):
             (
                 y_hat,
@@ -477,6 +478,7 @@ def train_and_evaluate(
                 bert,
                 ja_bert,
                 en_bert,
+                emo_bert
             )
             mel = spec_to_mel_torch(
                 spec,
@@ -758,6 +760,7 @@ def evaluate(hps, generator, eval_loader, writer_eval):
             bert,
             ja_bert,
             en_bert,
+            emo_bert,
         ) in enumerate(eval_loader):
             x, x_lengths = x.cuda(), x_lengths.cuda()
             spec, spec_lengths = spec.cuda(), spec_lengths.cuda()
@@ -766,6 +769,7 @@ def evaluate(hps, generator, eval_loader, writer_eval):
             bert = bert.cuda()
             ja_bert = ja_bert.cuda()
             en_bert = en_bert.cuda()
+            emo_bert = emo_bert.cuda()
             tone = tone.cuda()
             language = language.cuda()
             for use_sdp in [True, False]:
@@ -778,6 +782,7 @@ def evaluate(hps, generator, eval_loader, writer_eval):
                     bert,
                     ja_bert,
                     en_bert,
+                    emo_bert,
                     y=spec,
                     max_len=1000,
                     sdp_ratio=0.0 if not use_sdp else 1.0,

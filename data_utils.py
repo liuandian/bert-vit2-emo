@@ -7,6 +7,7 @@ from tools.log import logger
 import commons
 from mel_processing import spectrogram_torch, mel_spectrogram_torch
 from utils import load_wav_to_torch, load_filepaths_and_text
+from emotion_utils import get_emotion_embedding
 from text import cleaned_text_to_sequence
 from config import config
 
@@ -15,7 +16,7 @@ from config import config
 
 class TextAudioSpeakerLoader(torch.utils.data.Dataset):
     """
-    1) loads audio, speaker_id, text pairs
+    1) loads audio, speaker_id, text pairs, emo_
     2) normalizes text and converts them to sequences of integers
     3) computes spectrograms from audio files.
     """
@@ -59,7 +60,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         lengths = []
         skipped = 0
         logger.info("Init dataset...")
-        for _id, spk, language, text, phones, tone, word2ph in tqdm(
+        for _id, spk, language, text, phones, tone, word2ph, emo in tqdm(
             self.audiopaths_sid_text
         ):
             audiopath = f"{_id}"
@@ -68,7 +69,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                 tone = [int(i) for i in tone.split(" ")]
                 word2ph = [int(i) for i in word2ph.split(" ")]
                 audiopaths_sid_text_new.append(
-                    [audiopath, spk, language, text, phones, tone, word2ph]
+                    [audiopath, spk, language, text, phones, tone, word2ph,emo]
                 )
                 lengths.append(os.path.getsize(audiopath) // (2 * self.hop_length))
             else:
@@ -84,16 +85,16 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
 
     def get_audio_text_speaker_pair(self, audiopath_sid_text):
         # separate filename, speaker_id and text
-        audiopath, sid, language, text, phones, tone, word2ph = audiopath_sid_text
+        audiopath, sid, language, text, phones, tone, word2ph, emo = audiopath_sid_text
 
-        bert, ja_bert, en_bert, phones, tone, language = self.get_text(
-            text, word2ph, phones, tone, language, audiopath
+        bert, ja_bert, en_bert, phones, tone, language, emo_bert = self.get_text(
+            text, word2ph, phones, tone, language, audiopath, emo
         )
 
         spec, wav = self.get_audio(audiopath)
         sid = torch.LongTensor([int(self.spk_map[sid])])
 
-        return (phones, spec, wav, sid, tone, language, bert, ja_bert, en_bert)
+        return (phones, spec, wav, sid, tone, language, bert, ja_bert, en_bert, emo_bert)
 
     def get_audio(self, filename):
         audio, sampling_rate = load_wav_to_torch(filename)
@@ -137,7 +138,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                 torch.save(spec, spec_filename)
         return spec, audio_norm
 
-    def get_text(self, text, word2ph, phone, tone, language_str, wav_path):
+    def get_text(self, text, word2ph, phone, tone, language_str, wav_path, emo):
         phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str)
         if self.add_blank:
             phone = commons.intersperse(phone, 0)
@@ -169,7 +170,10 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         phone = torch.LongTensor(phone)
         tone = torch.LongTensor(tone)
         language = torch.LongTensor(language)
-        return bert, ja_bert, en_bert, phone, tone, language
+        
+        emo_bert=get_emotion_embedding(emo)
+        
+        return bert, ja_bert, en_bert, phone, tone, language, emo_bert
 
     def get_sid(self, sid):
         sid = torch.LongTensor([int(sid)])
@@ -214,7 +218,7 @@ class TextAudioSpeakerCollate:
         bert_padded = torch.FloatTensor(len(batch), 1024, max_text_len)
         ja_bert_padded = torch.FloatTensor(len(batch), 1024, max_text_len)
         en_bert_padded = torch.FloatTensor(len(batch), 1024, max_text_len)
-
+        emo_padded = torch.FloatTensor(len(batch), 1024)
         spec_padded = torch.FloatTensor(len(batch), batch[0][1].size(0), max_spec_len)
         wav_padded = torch.FloatTensor(len(batch), 1, max_wav_len)
         text_padded.zero_()
@@ -225,6 +229,7 @@ class TextAudioSpeakerCollate:
         bert_padded.zero_()
         ja_bert_padded.zero_()
         en_bert_padded.zero_()
+        emo_padded.zero_()
 
         for i in range(len(ids_sorted_decreasing)):
             row = batch[ids_sorted_decreasing[i]]
@@ -257,7 +262,10 @@ class TextAudioSpeakerCollate:
 
             en_bert = row[8]
             en_bert_padded[i, :, : en_bert.size(1)] = en_bert
-
+            
+            emo = row[9]  # 假设emo是第10个输出
+            emo_padded[i, :] = emo
+            
         return (
             text_padded,
             text_lengths,
@@ -271,6 +279,7 @@ class TextAudioSpeakerCollate:
             bert_padded,
             ja_bert_padded,
             en_bert_padded,
+            emo_padded,
         )
 
 

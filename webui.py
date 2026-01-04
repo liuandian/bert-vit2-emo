@@ -49,8 +49,8 @@ def generate_audio(
     length_scale,
     speaker,
     language,
-    reference_audio,
     emotion,
+    emotion_intensity,
     style_text,
     style_weight,
     skip_start=False,
@@ -67,8 +67,8 @@ def generate_audio(
             skip_end = idx != len(slices) - 1
             audio = infer(
                 piece,
-                reference_audio=reference_audio,
                 emotion=emotion,
+                emotion_intensity=emotion_intensity,
                 sdp_ratio=sdp_ratio,
                 noise_scale=noise_scale,
                 noise_scale_w=noise_scale_w,
@@ -96,8 +96,8 @@ def generate_audio_multilang(
     length_scale,
     speaker,
     language,
-    reference_audio,
     emotion,
+    emotion_intensity,
     skip_start=False,
     skip_end=False,
 ):
@@ -112,8 +112,8 @@ def generate_audio_multilang(
             skip_end = idx != len(slices) - 1
             audio = infer_multilang(
                 piece,
-                reference_audio=reference_audio,
                 emotion=emotion,
+                emotion_intensity=emotion_intensity,
                 sdp_ratio=sdp_ratio,
                 noise_scale=noise_scale,
                 noise_scale_w=noise_scale_w,
@@ -142,8 +142,8 @@ def tts_split(
     cut_by_sent,
     interval_between_para,
     interval_between_sent,
-    reference_audio,
-    emotion,
+    emotion_dropdown,
+    emotion_intensity,
     style_text,
     style_weight,
 ):
@@ -163,8 +163,8 @@ def tts_split(
                 noise_scale_w,
                 length_scale,
                 language,
-                reference_audio,
-                emotion,
+                emotion_dropdown,
+                emotion_intensity,
                 style_text,
                 style_weight,
             )
@@ -183,8 +183,8 @@ def tts_split(
                     noise_scale_w,
                     length_scale,
                     language,
-                    reference_audio,
-                    emotion,
+                    emotion_dropdown,
+                    emotion_intensity,
                     style_text,
                     style_weight,
                 )
@@ -250,8 +250,8 @@ def process_text(
     noise_scale_w,
     length_scale,
     language,
-    reference_audio,
     emotion,
+    emotion_intensity=1.0,
     style_text=None,
     style_weight=0,
 ):
@@ -277,8 +277,8 @@ def process_text(
                     length_scale,
                     _speaker,
                     _lang,
-                    reference_audio,
                     emotion,
+                    emotion_intensity,
                 )
             )
     elif language.lower() == "auto":
@@ -293,8 +293,8 @@ def process_text(
                 length_scale,
                 speaker,
                 _lang,
-                reference_audio,
                 emotion,
+                emotion_intensity,
             )
         )
     else:
@@ -307,8 +307,8 @@ def process_text(
                 length_scale,
                 speaker,
                 language,
-                reference_audio,
                 emotion,
+                emotion_intensity,
                 style_text,
                 style_weight,
             )
@@ -324,21 +324,16 @@ def tts_fn(
     noise_scale_w,
     length_scale,
     language,
-    reference_audio,
-    emotion,
-    prompt_mode,
+    emotion_dropdown,
+    emotion_intensity,
     style_text=None,
     style_weight=0,
 ):
     if style_text == "":
         style_text = None
-    if prompt_mode == "Audio prompt":
-        if reference_audio == None:
-            return ("Invalid audio prompt", None)
-        else:
-            reference_audio = load_audio(reference_audio)[1]
-    else:
-        reference_audio = None
+
+    # Use emotion_dropdown for emotion control
+    final_emotion = emotion_dropdown if emotion_dropdown else "neutral"
 
     audio_list = process_text(
         text,
@@ -348,8 +343,8 @@ def tts_fn(
         noise_scale_w,
         length_scale,
         language,
-        reference_audio,
-        emotion,
+        final_emotion,
+        emotion_intensity,
         style_text,
         style_weight,
     )
@@ -440,6 +435,27 @@ if __name__ == "__main__":
                 audio_prompt = gr.Audio(
                     label="Audio prompt", type="filepath", visible=False
                 )
+
+                # Emotion control
+                with gr.Accordion("情感控制 (Emotion Control)", open=True):
+                    gr.Markdown(
+                        "选择情感类别和强度来控制语音的情感表达\n\n"
+                        "**注意**：强度为0表示中性，强度为1表示完全该情感"
+                    )
+                    emotion_dropdown = gr.Dropdown(
+                        choices=["neutral", "happy", "sad", "angry", "fear", "surprise"],
+                        value="neutral",
+                        label="情感类别 (Emotion)",
+                        info="选择目标情感"
+                    )
+                    emotion_intensity = gr.Slider(
+                        minimum=0,
+                        maximum=1,
+                        value=1.0,
+                        step=0.1,
+                        label="情感强度 (Intensity)",
+                        info="0=中性，1=完全情感"
+                    )
                 sdp_ratio = gr.Slider(
                     minimum=0, maximum=1, value=0.5, step=0.1, label="SDP Ratio"
                 )
@@ -511,9 +527,8 @@ if __name__ == "__main__":
                 noise_scale_w,
                 length_scale,
                 language,
-                audio_prompt,
-                text_prompt,
-                prompt_mode,
+                emotion_dropdown,
+                emotion_intensity,
                 style_text,
                 style_weight,
             ],
@@ -538,8 +553,8 @@ if __name__ == "__main__":
                 opt_cut_by_sent,
                 interval_between_para,
                 interval_between_sent,
-                audio_prompt,
-                text_prompt,
+                emotion_dropdown,
+                emotion_intensity,
                 style_text,
                 style_weight,
             ],

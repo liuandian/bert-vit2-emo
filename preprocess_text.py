@@ -53,12 +53,12 @@ def preprocess(
                 if len(lines) != 0:
                     for line in tqdm(lines):
                         try:
-                            utt, spk, language, text = line.strip().split("|")
+                            utt, spk, language, text, emo = line.strip().split("|")
                             norm_text, phones, tones, word2ph = clean_text(
                                 text, language
                             )
                             out_file.write(
-                                "{}|{}|{}|{}|{}|{}|{}\n".format(
+                                "{}|{}|{}|{}|{}|{}|{}|{}\n".format(
                                     utt,
                                     spk,
                                     language,
@@ -66,6 +66,7 @@ def preprocess(
                                     " ".join(phones),
                                     " ".join([str(i) for i in tones]),
                                     " ".join([str(i) for i in word2ph]),
+                                    emo,
                                 )
                             )
                         except Exception as e:
@@ -82,7 +83,7 @@ def preprocess(
         countSame = 0
         countNotFound = 0
         for line in f.readlines():
-            utt, spk, language, text, phones, tones, word2ph = line.strip().split("|")
+            utt, spk, language, text, phones, tones, word2ph, emo = line.strip().split("|")
             if utt in audioPaths:
                 # 过滤数据集错误：相同的音频匹配多个文本，导致后续bert出问题
                 print(f"重复音频文本：{line}")
